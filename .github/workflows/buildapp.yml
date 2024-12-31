@@ -135,13 +135,23 @@ jobs:
         id: build_package
         run: |
           cd ${{ github.workspace }}/main
-          export ADDITIONAL_FRAMEWORKS="-F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks"
+          # Create symbolic link for Preferences framework
+          sudo mkdir -p /Library/Frameworks
+          sudo ln -sf "$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks/Preferences.framework" "/Library/Frameworks/Preferences.framework"
+          
+          export ADDITIONAL_FRAMEWORKS="-F/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks"
           export ADDITIONAL_CFLAGS="-Wno-deprecated-declarations"
+          export ADDITIONAL_LDFLAGS="-Wl,-no_warn_duplicate_libraries"
+          
           brew install swiftlint
           sed -i '' "27s#.*#BUNDLE_ID = ${{ env.BUNDLE_ID }}#g" Makefile
           sed -i '' "26s#.*#DISPLAY_NAME = ${{ env.APP_NAME }}#g" Makefile
           sed -i '' "1s#.*#export TARGET = iphone:clang:${{ inputs.sdk_version }}:14.0#g" Makefile
-          make package THEOS_PACKAGE_SCHEME=rootless IPA=Payload/YouTube.app FINALPACKAGE=1 EXTRA_FRAMEWORKS="$ADDITIONAL_FRAMEWORKS" EXTRA_CFLAGS="$ADDITIONAL_CFLAGS"
+          
+          make package THEOS_PACKAGE_SCHEME=rootless IPA=Payload/YouTube.app FINALPACKAGE=1 \
+            EXTRA_FRAMEWORKS="$ADDITIONAL_FRAMEWORKS" \
+            EXTRA_CFLAGS="$ADDITIONAL_CFLAGS" \
+            EXTRA_LDFLAGS="$ADDITIONAL_LDFLAGS"
 
         env:
           THEOS: ${{ github.workspace }}/theos
