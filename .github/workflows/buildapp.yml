@@ -135,13 +135,17 @@ jobs:
         id: build_package
         run: |
           cd ${{ github.workspace }}/main
-          # Create symbolic link for Preferences framework
-          sudo mkdir -p /Library/Frameworks
-          sudo ln -sf "$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks/Preferences.framework" "/Library/Frameworks/Preferences.framework"
           
-          export ADDITIONAL_FRAMEWORKS="-F/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks"
+          # Create necessary directories
+          mkdir -p .theos/obj/install/Library/Frameworks
+          mkdir -p .theos/obj/install/var/jb/Library/Frameworks
+          
+          # Copy Preferences framework
+          cp -R "$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks/Preferences.framework" ".theos/obj/install/Library/Frameworks/"
+          
+          export ADDITIONAL_FRAMEWORKS="-F.theos/obj/install/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/Frameworks -F$THEOS/sdks/iPhoneOS${{ inputs.sdk_version }}.sdk/System/Library/PrivateFrameworks"
           export ADDITIONAL_CFLAGS="-Wno-deprecated-declarations"
-          export ADDITIONAL_LDFLAGS="-Wl,-no_warn_duplicate_libraries"
+          export ADDITIONAL_LDFLAGS="-Wl,-rpath,@executable_path/Frameworks -Wl,-no_warn_duplicate_libraries"
           
           brew install swiftlint
           sed -i '' "27s#.*#BUNDLE_ID = ${{ env.BUNDLE_ID }}#g" Makefile
